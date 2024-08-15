@@ -9,9 +9,17 @@ export default defineConfig({
     monkey({
       entry: 'src/main.ts',
       userscript: {
+        name: "PPBookmarkButton",
+        author: "SGThr7",
+        description: {
+          "ja": "pixiv.netで、非公開状態でブックマークするボタンを追加します",
+          "en": "Add private bookmark button to pixiv.net",
+        },
         icon: 'https://vitejs.dev/logo.svg',
         namespace: 'npm/vite-plugin-monkey',
-        match: ['https://www.google.com/'],
+        match: [
+          'https://www.google.com/',
+        ],
       },
       build: {
         externalGlobals: {

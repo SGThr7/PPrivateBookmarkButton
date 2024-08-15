@@ -1,5 +1,9 @@
 {
-  "name": "pixiv-private-bookmark-button",
+  "name": "pp-bookmark-button",
+  "author": {
+    "name": "SGThr7",
+    "email": "sgthr7@gmail.com"
+  },
   "private": true,
   "version": "0.0.0",
   "type": "module",
