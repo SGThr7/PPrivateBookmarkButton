@@ -15,10 +15,10 @@ export default defineConfig({
           "ja": "pixiv.netで、非公開状態でブックマークするボタンを追加します",
           "en": "Add private bookmark button to pixiv.net",
         },
-        icon: 'https://vitejs.dev/logo.svg',
-        namespace: 'npm/vite-plugin-monkey',
+        version: '0.0.1',
+        namespace: 'sgthr7/monkey-script',
         match: [
-          'https://www.google.com/',
+          'https://www.pixiv.net/*',
         ],
       },
       build: {
