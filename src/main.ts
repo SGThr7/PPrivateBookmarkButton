@@ -31,6 +31,9 @@ function initPpbb() {
 
   // 同一作者の関連作品
   initSameCreatorRecommendationArtworks()
+
+  // その他の関連作品
+  initOtherRecommendation()
 }
 
 function initMainArtwork() {
@@ -126,6 +129,70 @@ function applySameCreatorRecommendationArtwork(target: Element) {
   app.mount(ppbbRoot)
 
   log('Add button for same creator\'s recommendation', artworkId, target)
+}
+
+function initOtherRecommendation() {
+  const targetContainer = document.querySelector<HTMLUListElement>('div.gtm-illust-recommend-zone ul')
+  if (targetContainer != null) {
+    for (const artwork of targetContainer.children) {
+      applyOtherRecommendationArtwork(artwork)
+    }
+
+    // observe scrolling
+    const observer = new MutationObserver((records, _observer) => {
+      for (const record of records) {
+        if (record.addedNodes.length > 0) {
+          for (const addedNode of record.addedNodes) {
+            // addedNode.classList.contains('sc-9y4be5-2')
+            // addedNode.classList.contains('sc-9y4be5-3')
+            // addedNode.classList.contains('sc-1wcj34s-1')
+            if (addedNode instanceof HTMLLIElement && addedNode.classList.contains('sc-9y4be5-2')) {
+              applyOtherRecommendationArtwork(addedNode)
+            }
+          }
+        }
+      }
+    })
+    observer.observe(targetContainer, observerOptions)
+  }
+}
+
+function applyOtherRecommendationArtwork(target: Element) {
+  const button = target.querySelector('button')
+  if (button == null) {
+    return
+  }
+
+  const artworkLink = target.querySelector('a[data-gtm-value]')
+  if (artworkLink == null) {
+    return
+  }
+
+  const artworkId = artworkLink.getAttribute('data-gtm-value')
+  if (artworkId == null) {
+    return
+  }
+
+  const buttonContainer = artworkLink.parentElement
+  if (buttonContainer == null) {
+    return
+  }
+
+  // Create button root element
+  const ppbbRoot = document.createElement('div')
+  ppbbRoot.classList.add('ppbb-root', 'ppbb-absolute')
+
+  // Inject
+  buttonContainer.parentNode?.insertBefore(ppbbRoot, buttonContainer.nextElementSibling)
+
+  // Mount
+  const app = createApp(PrivateBookmarkButton, {
+    artworkId,
+    relatedBookmarkButton: button
+  })
+  app.mount(ppbbRoot)
+
+  log('Add button for other recommendation', artworkId, target)
 }
 
 // // 関連作品
