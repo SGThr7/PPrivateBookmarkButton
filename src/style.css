@@ -2,3 +2,13 @@
   display: inline;
   user-select: none;
 }
+
+.ppbb-main {
+  padding-right: 13px;
+}
+
+.ppbb-absolute {
+  position: absolute;
+  bottom: 0px;
+  right: 32px;
+}

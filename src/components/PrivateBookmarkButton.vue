@@ -1,6 +1,6 @@
 <template>
 	<button type="button" class="private-bookmark-button fgVkZi" @click="privateBookmark">
-    <div class="container"><span class="heart">♡</span>️<span class="lock">🔒️</span></div>
+    <div class="container"><span class="heart heart-fill">♥</span><span class="heart heart-outline">♡</span>️<span class="lock">🔒️</span></div>
   </button>
 </template>
 
@@ -14,16 +14,26 @@ import { computed } from 'vue';
 // ブックマーク追加/編集ページ: https://www.pixiv.net/bookmark_add.php?type=illust&illust_id=<artwork-id>
 
 const props = defineProps({
+  artworkId: {
+    type: String,
+    required: true,
+    validator: (val: string) => {
+      const validatorRegex = /^\d+$/
+      return validatorRegex.test(val)
+    },
+  },
   relatedBookmarkButton: {
     type: HTMLButtonElement,
-    required: true,
+    required: false,
   }
 })
 
-const artworkId = computed(() => findArtworkId(props.relatedBookmarkButton))
-const bookmarkPageUrl = computed(() => new URL(`https://www.pixiv.net/bookmark_add.php?type=illust&illust_id=${artworkId.value}`))
+const bookmarkPageUrl = computed(() => new URL(`https://www.pixiv.net/bookmark_add.php?type=illust&illust_id=${props.artworkId}`))
 
 function privateBookmark() {
+  // for click animation
+  props.relatedBookmarkButton?.click()
+
   const bookmarkPageWindow = window.open(bookmarkPageUrl.value, '_blank', 'popup,width=1,height=1,top=0,left=0')
 
   const bookmarkPageAction = () => {
@@ -60,9 +70,6 @@ function privateBookmark() {
     }
     bookmarkPageWindow.addEventListener(finishedEventName, onBookmarkedAction)
 
-    // for click animation
-    props.relatedBookmarkButton.click()
-
     // submit
     form.requestSubmit()
   }
@@ -71,48 +78,14 @@ function privateBookmark() {
   bookmarkPageWindow?.addEventListener('load', bookmarkPageAction)
 }
 
-// #region utils
-
-function findArtworkId(bookmarkButton: HTMLButtonElement): string | null {
-  if (isMainArtwork(bookmarkButton)) {
-    return findMainArtworkId()
-  } else {
-    return null
-  }
-}
-
-function isMainArtwork(bookmarkButton: Element): boolean {
-  const targetClasses = [
-    'sc-kgq5hw-0',
-    'fgVkZi',
-    'gtm-main-bookmark',
-  ]
-  const buttonClassList = bookmarkButton.classList
-  return targetClasses.every((val) => buttonClassList.contains(val))
-}
-
-function findMainArtworkId(): string {
-  const url = new URL(window.location.href)
-  const paths = url.pathname.split('/')
-  if (paths[1] !== 'artworks') {
-    throw new Error('Failed to find artwork id')
-  }
-
-  const mainArtworkId = paths[2]
-  return mainArtworkId
-}
-
 function isRadioNodeList(target: object): target is RadioNodeList {
   return target instanceof RadioNodeList || target.toString() === '[object RadioNodeList]'
 }
-
-// #endregion utils
 </script>
 
 <style scoped>
 .private-bookmark-button {
   color: inherit;
-  margin-right: 13px;
   font-size: large;
   font-family: inherit;
 }
@@ -123,6 +96,17 @@ function isRadioNodeList(target: object): target is RadioNodeList {
 
 .heart {
   font-size: 150%;
+}
+
+.heart-fill {
+  color: inherit;
+}
+
+.heart-outline {
+  position: absolute;
+  right: 0px;
+  bottom: 0px;
+  color: black;
 }
 
 .lock {

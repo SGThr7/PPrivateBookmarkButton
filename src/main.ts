@@ -2,6 +2,13 @@ import { createApp } from 'vue';
 import './style.css';
 import PrivateBookmarkButton from './components/PrivateBookmarkButton.vue';
 
+function log(...data: any[]) {
+  if (!import.meta.env.DEV) return
+
+  const msg = data.splice(0, 1)
+  console.log(`[PPBookmarkButton] ${msg[0]}`, ...data)
+}
+
 const observer = new MutationObserver((mutations) => {
   console.log('detected')
   for (const mutation of mutations) {
@@ -13,19 +20,112 @@ const observerOptions: MutationObserverInit = {
   childList: true,
 };
 
-// // 初回更新
-// updatePpbbElements()
+// FIXME: 新規タブを開かないページ遷移を検知して再度呼び直す必要がある
+window.addEventListener('load', initPpbb)
 
-// 個別イラストページ
-// FIXME: たまに登録失敗する
-const artworksBookmarkButton = document.querySelector<HTMLButtonElement>('button.gtm-main-bookmark')
-const artworksBookmarkParent = artworksBookmarkButton?.parentElement
-if (artworksBookmarkButton != null && artworksBookmarkParent != null) {
-  console.log('[PPBookmarkButton] Add button for main artwork', artworksBookmarkParent)
-  injectPpbbButton(artworksBookmarkButton, (root) => {
-    // insert after
-    artworksBookmarkParent.parentNode?.insertBefore(root, artworksBookmarkParent.nextElementSibling)
+function initPpbb() {
+  log('Initialize')
+
+  // 個別イラストページ
+  initMainArtwork()
+
+  // 同一作者の関連作品
+  initSameCreatorRecommendationArtworks()
+}
+
+function initMainArtwork() {
+  const buttonContainer = document.querySelector<HTMLDivElement>('div.sc-181ts2x-3')
+  if (buttonContainer == null) {
+    return
+  }
+
+  const button = document.querySelector<HTMLButtonElement>('button.gtm-main-bookmark')
+
+  const url = new URL(window.location.href)
+  const artworkPageRegex = /^\/(?:en\/)?artworks\/(\d+)$/
+  const regexResult = url.pathname.match(artworkPageRegex)
+  if (regexResult == null || regexResult.length <= 1) {
+    return
+  }
+  const artworkId = regexResult[1]
+
+  // Create button root element
+  const ppbbRoot = document.createElement('div')
+  ppbbRoot.classList.add('ppbb-root', 'ppbb-main')
+
+  // Inject
+  buttonContainer.parentNode?.insertBefore(ppbbRoot, buttonContainer.nextElementSibling)
+
+  // Mount
+  const app = createApp(PrivateBookmarkButton, {
+    artworkId,
+    relatedBookmarkButton: button
   })
+  app.mount(ppbbRoot)
+  
+
+  log('Add button for main artwork', artworkId, buttonContainer)
+}
+
+function initSameCreatorRecommendationArtworks() {
+  const targetContainer = document.querySelector<HTMLDivElement>('nav.sc-1nhgff6-3 > div.sc-1nhgff6-4')
+  if (targetContainer != null) {
+    for (const artwork of targetContainer.children) {
+      applySameCreatorRecommendationArtwork(artwork)
+    }
+
+    // observe scrolling
+    const observer = new MutationObserver((records, _observer) => {
+      for (const record of records) {
+        if (record.addedNodes.length > 0) {
+          for (const addedNode of record.addedNodes) {
+            if (addedNode instanceof HTMLDivElement && addedNode.classList.contains('sc-1nhgff6-0')) {
+              applySameCreatorRecommendationArtwork(addedNode)
+            }
+          }
+        }
+      }
+    })
+    observer.observe(targetContainer, observerOptions)
+  }
+}
+
+function applySameCreatorRecommendationArtwork(target: Element) {
+  const button = target.querySelector('button')
+  if (button == null) {
+    return
+  }
+
+  const artworkLink = target.querySelector('a[data-gtm-value]')
+  if (artworkLink == null) {
+    return
+  }
+
+  const artworkId = artworkLink.getAttribute('data-gtm-value')
+  if (artworkId == null) {
+    return
+  }
+
+  const buttonContainer = artworkLink.parentElement
+  if (buttonContainer == null) {
+    return
+  }
+
+  // Create button root element
+  const ppbbRoot = document.createElement('div')
+  ppbbRoot.classList.add('ppbb-root', 'ppbb-absolute')
+
+  // Inject
+  buttonContainer.parentNode?.insertBefore(ppbbRoot, buttonContainer.nextElementSibling)
+
+  // Mount
+  const app = createApp(PrivateBookmarkButton, {
+    artworkId,
+    relatedBookmarkButton: button
+  })
+  app.mount(ppbbRoot)
+
+  log('Add button for same creator\'s recommendation', artworkId, target)
 }
 
 // // 関連作品
@@ -49,18 +149,3 @@ if (artworksBookmarkButton != null && artworksBookmarkParent != null) {
 //   //   })
 //   // }
 // }
-
-function injectPpbbButton(relatedBookmarkButton: HTMLButtonElement, injectCallback: (buttonRootElement: HTMLElement) => void) {
-  // Create button element
-  const ppbbRoot = document.createElement('div')
-  ppbbRoot.classList.add('ppbb-root')
-
-  // Inject
-  injectCallback(ppbbRoot)
-
-  // Mount
-  const app = createApp(PrivateBookmarkButton, {
-    relatedBookmarkButton
-  })
-  app.mount(ppbbRoot)
-}
