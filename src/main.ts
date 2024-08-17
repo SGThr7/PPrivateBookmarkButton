@@ -1,45 +1,93 @@
 import { createApp } from 'vue';
 import './style.css';
 import PrivateBookmarkButton from './components/PrivateBookmarkButton.vue';
+import { isElement, log, LogVerbosity } from './lib/util';
 
-function log(...data: any[]) {
-  if (!import.meta.env.DEV) return
+const globalObserver = new MutationObserver((records, _observer) => {
+  records.forEach((record) => {
+    if (record.addedNodes.length <= 0) {
+      return
+    }
+    if (Array.from(record.addedNodes).some((node) => isElement(node) && Array.from(node.classList).some((className) => className.startsWith('ppbb')))) {
+      return
+    }
 
-  const msg = data.splice(0, 1)
-  console.log(`[PPBookmarkButton] ${msg[0]}`, ...data)
-}
+    const llog = (msg: string, ...data: any[]) => { log(LogVerbosity.Debug, `[GlobalObserver] ${msg}`, ...data) }
 
-// first init
-window.addEventListener('load', initPpbb)
+    llog('Begin container test', record)
 
-// init when page moved
-const observer = new MutationObserver((records) => {
-  initPpbb()
+    // single container
+    llog('Test single container')
+    Array.from(record.addedNodes)
+      .filter(isElement)
+      .filter(
+        (el) => el.querySelectorAll('button.sc-kgq5hw-0').length === 1
+          && el.querySelector('div.ppbb-root') == null
+      )
+      .forEach(applyThumbnailArtwork)
+    // container list
+    llog('Test container list')
+    if (record.addedNodes.length === 1) {
+      const maybeContainersOwner = record.addedNodes[0]
+      if (isElement(maybeContainersOwner)) {
+        const artworkContainersList = maybeContainersOwner.querySelectorAll(':is(ul, div.sc-1nhgff6-4) > :is(div, li):has(button.sc-kgq5hw-0)')
+        artworkContainersList.forEach((artworkContainers) => {
+          llog('Found container gird', artworkContainers, maybeContainersOwner)
+          Array.from(artworkContainers.children)
+            .filter((el) => el.querySelector('div.ppbb-root') == null)
+            .forEach(applyThumbnailArtwork)
+        })
+      }
+    }
+
+    llog('End container test')
+  })
 })
-const observerOptions: MutationObserverInit = {
-  subtree: true,
-  childList: true,
-}
-const title = document.head.querySelector('title')
-if (title != null) {
-  observer.observe(title, observerOptions)
+
+function init() {
+  // initial injection
+  log(LogVerbosity.Debug, 'init: Begin initial injection')
+  const initialArtworkContainers = document.querySelectorAll('div:has(a[data-gtm-value]):has(div:nth-child(2) button.sc-kgq5hw-0)')
+  initialArtworkContainers.forEach((el) => {
+    if (
+      el.querySelectorAll('button.sc-kgq5hw-0').length === 1
+      && el.querySelector('div.ppbb-root') == null
+    ) {
+      applyThumbnailArtwork(el);
+    }
+  })
+
+  // bind events
+  log(LogVerbosity.Debug, 'init: Bind events')
+  window.addEventListener('load', onLoad)
+
+  // observe dynamic loaded artworks
+  log(LogVerbosity.Debug, 'init: Run global observer')
+  globalObserver.observe(document, {
+    childList: true,
+    subtree: true,
+  })
+
+  // observe page title
+  log(LogVerbosity.Debug, 'init: Run page title observer')
+  const titleObserver = new MutationObserver((records, _observer) => {
+    initMainArtwork()
+  })
+  const title = document.head.querySelector('title')
+  if (title != null) {
+    titleObserver.observe(title, {
+      childList: true,
+      subtree: true,
+    })
+  }
 }
 
-function initPpbb() {
-  log('Initialize')
-
+function onLoad() {
   // 個別イラストページ
   initMainArtwork()
-
-  // 同一作者の関連作品
-  initSameCreatorRecommendationArtworks()
-
-  // その他の関連作品
-  initOtherRecommendation()
-
-  // ブックマーククリック時に出るおすすめ作品
-  initBookmarkClickedRecommendation()
 }
+
+init()
 
 function initMainArtwork() {
   const buttonContainer = document.querySelector<HTMLDivElement>('div.sc-181ts2x-3')
@@ -72,114 +120,31 @@ function initMainArtwork() {
   app.mount(ppbbRoot)
   
 
-  log('Add button for main artwork', artworkId, buttonContainer)
+  log(LogVerbosity.Verbose, 'Add button for main artwork', artworkId, buttonContainer)
 }
 
-function initSameCreatorRecommendationArtworks() {
-  const targetContainer = document.querySelector<HTMLDivElement>('nav.sc-1nhgff6-3 > div.sc-1nhgff6-4')
-  if (targetContainer != null) {
-    for (const artwork of targetContainer.children) {
-      applySameCreatorRecommendationArtwork(artwork)
-    }
-
-    // observe scrolling
-    const observer = new MutationObserver((records, _observer) => {
-      for (const record of records) {
-        if (record.addedNodes.length > 0) {
-          for (const addedNode of record.addedNodes) {
-            if (addedNode instanceof HTMLDivElement && addedNode.classList.contains('sc-1nhgff6-0')) {
-              applySameCreatorRecommendationArtwork(addedNode)
-            }
-          }
-        }
-      }
-    })
-    observer.observe(targetContainer, observerOptions)
-  }
-}
-
-function applySameCreatorRecommendationArtwork(target: Element) {
+function applyThumbnailArtwork(target: Element) {
   const button = target.querySelector('button')
   if (button == null) {
+    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned button is not found', target)
     return
   }
 
   const artworkLink = target.querySelector('a[data-gtm-value]')
   if (artworkLink == null) {
+    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned artwork link is not found', target)
     return
   }
 
   const artworkId = artworkLink.getAttribute('data-gtm-value')
   if (artworkId == null) {
+    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned artwork cannot extracted', artworkLink, target)
     return
   }
 
-  const buttonContainer = artworkLink.parentElement
+  const buttonContainer = button.parentElement?.parentElement
   if (buttonContainer == null) {
-    return
-  }
-
-  // Create button root element
-  const ppbbRoot = document.createElement('div')
-  ppbbRoot.classList.add('ppbb-root', 'ppbb-absolute')
-
-  // Inject
-  buttonContainer.parentNode?.insertBefore(ppbbRoot, buttonContainer.nextElementSibling)
-
-  // Mount
-  const app = createApp(PrivateBookmarkButton, {
-    artworkId,
-    relatedBookmarkButton: button
-  })
-  app.mount(ppbbRoot)
-
-  log('Add button for same creator\'s recommendation', artworkId, target)
-}
-
-function initOtherRecommendation() {
-  const targetContainer = document.querySelector<HTMLUListElement>('div.gtm-illust-recommend-zone ul')
-  if (targetContainer != null) {
-    for (const artwork of targetContainer.children) {
-      applyOtherRecommendationArtwork(artwork)
-    }
-
-    // observe scrolling
-    const observer = new MutationObserver((records, _observer) => {
-      for (const record of records) {
-        if (record.addedNodes.length > 0) {
-          for (const addedNode of record.addedNodes) {
-            // addedNode.classList.contains('sc-9y4be5-2')
-            // addedNode.classList.contains('sc-9y4be5-3')
-            // addedNode.classList.contains('sc-1wcj34s-1')
-            if (addedNode instanceof HTMLLIElement && addedNode.classList.contains('sc-9y4be5-2')) {
-              applyOtherRecommendationArtwork(addedNode)
-            }
-          }
-        }
-      }
-    })
-    observer.observe(targetContainer, observerOptions)
-  }
-}
-
-function applyOtherRecommendationArtwork(target: Element) {
-  const button = target.querySelector('button')
-  if (button == null) {
-    return
-  }
-
-  const artworkLink = target.querySelector('a[data-gtm-value]')
-  if (artworkLink == null) {
-    return
-  }
-
-  const artworkId = artworkLink.getAttribute('data-gtm-value')
-  if (artworkId == null) {
-    return
-  }
-
-  const buttonContainer = artworkLink.parentElement
-  if (buttonContainer == null) {
+    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned artwork link has not container', button, target)
     return
   }
 
@@ -197,38 +162,5 @@ function applyOtherRecommendationArtwork(target: Element) {
   })
   app.mount(ppbbRoot)
 
-  log('Add button for recommendation', artworkId, target)
-}
-
-// reuse observer
-const captionRecommendationObserver = new MutationObserver((records, _observer) => {
-  const recommendation = records.map((record) => {
-    return Array.from(record.addedNodes.values())
-      .find((node) => node instanceof HTMLDivElement && node.classList.contains('sc-a4p1vl-0')) as HTMLDivElement
-  })
-    .filter((val) => val != null)
-    .at(0)
-  if (recommendation == null) {
-    return
-  }
-
-  const targetContainer = recommendation.querySelector<HTMLDivElement>('div.sc-a4p1vl-3')
-  if (targetContainer != null) {
-    // init
-    for (const artwork of targetContainer.children) {
-      applyOtherRecommendationArtwork(artwork)
-    }
-  }
-})
-function initBookmarkClickedRecommendation() {
-  const recommendationOwner = document.querySelector<HTMLElement>('figcaption.sc-1yvhotl-4')
-  if (recommendationOwner == null) {
-    return
-  }
-
-  // wait for added
-  captionRecommendationObserver.observe(recommendationOwner, {
-    subtree: false,
-    childList: true,
-  })
+  log(LogVerbosity.Verbose, 'Add button for recommendation', artworkId, target)
 }

@@ -79,7 +79,7 @@ function privateBookmark() {
 }
 
 function isRadioNodeList(target: object): target is RadioNodeList {
-  return target instanceof RadioNodeList || target.toString() === '[object RadioNodeList]'
+  return target instanceof RadioNodeList || target.toString() === RadioNodeList.prototype.toString()
 }
 </script>
 
