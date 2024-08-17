@@ -36,6 +36,9 @@ function initPpbb() {
 
   // その他の関連作品
   initOtherRecommendation()
+
+  // ブックマーククリック時に出るおすすめ作品
+  initBookmarkClickedRecommendation()
 }
 
 function initMainArtwork() {
@@ -185,7 +188,7 @@ function applyOtherRecommendationArtwork(target: Element) {
   ppbbRoot.classList.add('ppbb-root', 'ppbb-absolute')
 
   // Inject
-  buttonContainer.parentNode?.insertBefore(ppbbRoot, buttonContainer.nextElementSibling)
+  buttonContainer.appendChild(ppbbRoot)
 
   // Mount
   const app = createApp(PrivateBookmarkButton, {
@@ -194,5 +197,38 @@ function applyOtherRecommendationArtwork(target: Element) {
   })
   app.mount(ppbbRoot)
 
-  log('Add button for other recommendation', artworkId, target)
+  log('Add button for recommendation', artworkId, target)
+}
+
+// reuse observer
+const captionRecommendationObserver = new MutationObserver((records, _observer) => {
+  const recommendation = records.map((record) => {
+    return Array.from(record.addedNodes.values())
+      .find((node) => node instanceof HTMLDivElement && node.classList.contains('sc-a4p1vl-0')) as HTMLDivElement
+  })
+    .filter((val) => val != null)
+    .at(0)
+  if (recommendation == null) {
+    return
+  }
+
+  const targetContainer = recommendation.querySelector<HTMLDivElement>('div.sc-a4p1vl-3')
+  if (targetContainer != null) {
+    // init
+    for (const artwork of targetContainer.children) {
+      applyOtherRecommendationArtwork(artwork)
+    }
+  }
+})
+function initBookmarkClickedRecommendation() {
+  const recommendationOwner = document.querySelector<HTMLElement>('figcaption.sc-1yvhotl-4')
+  if (recommendationOwner == null) {
+    return
+  }
+
+  // wait for added
+  captionRecommendationObserver.observe(recommendationOwner, {
+    subtree: false,
+    childList: true,
+  })
 }
