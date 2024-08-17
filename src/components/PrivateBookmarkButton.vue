@@ -1,5 +1,5 @@
 <template>
-	<button type="button" class="private-bookmark-button fgVkZi" @click="privateBookmark">
+	<button type="button" class="ppbb-button fgVkZi" @click="privateBookmark">
     <div class="container"><span class="heart heart-fill">♥</span><span class="heart heart-outline">♡</span>️<span class="lock">🔒️</span></div>
   </button>
 </template>

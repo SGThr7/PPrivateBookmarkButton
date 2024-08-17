@@ -9,19 +9,21 @@ function log(...data: any[]) {
   console.log(`[PPBookmarkButton] ${msg[0]}`, ...data)
 }
 
-const observer = new MutationObserver((mutations) => {
-  console.log('detected')
-  for (const mutation of mutations) {
-    console.log(mutation.target)
-  }
+// first init
+window.addEventListener('load', initPpbb)
+
+// init when page moved
+const observer = new MutationObserver((records) => {
+  initPpbb()
 })
 const observerOptions: MutationObserverInit = {
   subtree: true,
   childList: true,
-};
-
-// FIXME: 新規タブを開かないページ遷移を検知して再度呼び直す必要がある
-window.addEventListener('load', initPpbb)
+}
+const title = document.head.querySelector('title')
+if (title != null) {
+  observer.observe(title, observerOptions)
+}
 
 function initPpbb() {
   log('Initialize')
@@ -194,25 +196,3 @@ function applyOtherRecommendationArtwork(target: Element) {
 
   log('Add button for other recommendation', artworkId, target)
 }
-
-// // 関連作品
-// const recommendedGrid = document.querySelector('ul.sc-9y4be5-1.jtUPOE')
-// if (recommendedGrid != null) {
-//   console.log('grid', recommendedGrid)
-//   observer.observe(recommendedGrid, observerOptions)
-// }
-
-// function updatePpbbElements() {
-//   const artworksBookmarkButton = document.querySelector('.sc-181ts2x-3.cXSAgn')
-//   console.log('artworksBookmarkButton', artworksBookmarkButton)
-//   injectPpbbButton((root) => {
-//     // insert after
-//     artworksBookmarkButton?.parentNode?.insertBefore(root, artworksBookmarkButton.nextElementSibling)
-//   })
-//   // const defaultBookmarkButtons = document.querySelectorAll('.sc-iasfms-4.iHfghO')
-//   // for (const defaultBookmarkButton of defaultBookmarkButtons) {
-//   //   injectPpbbButton((root) => {
-//   //     defaultBookmarkButton.parentNode?.insertBefore(root, defaultBookmarkButton.nextElementSibling)
-//   //   })
-//   // }
-// }
