@@ -12,12 +12,10 @@ const globalObserver = new MutationObserver((records, _observer) => {
       return
     }
 
-    const llog = (msg: string, ...data: any[]) => { log(LogVerbosity.Debug, `[GlobalObserver] ${msg}`, ...data) }
-
-    llog('Begin container test', record)
+    log(LogVerbosity.Debug, '[GlobalObserver] Begin container test', record)
 
     // single container
-    llog('Test single container')
+    log(LogVerbosity.Debug, '[GlobalObserver] Test single container')
     Array.from(record.addedNodes)
       .filter(isElement)
       .filter(
@@ -26,13 +24,13 @@ const globalObserver = new MutationObserver((records, _observer) => {
       )
       .forEach(applyThumbnailArtwork)
     // container list
-    llog('Test container list')
+    log(LogVerbosity.Debug, '[GlobalObserver] Test container list')
     if (record.addedNodes.length === 1) {
       const maybeContainersOwner = record.addedNodes[0]
       if (isElement(maybeContainersOwner)) {
         const artworkContainersList = maybeContainersOwner.querySelectorAll(':is(ul, div.sc-1nhgff6-4) > :is(div, li):has(button.sc-kgq5hw-0)')
         artworkContainersList.forEach((artworkContainers) => {
-          llog('Found container gird', artworkContainers, maybeContainersOwner)
+          log(LogVerbosity.Debug, '[GlobalObserver] Found container gird', artworkContainers, maybeContainersOwner)
           Array.from(artworkContainers.children)
             .filter((el) => el.querySelector('div.ppbb-root') == null)
             .forEach(applyThumbnailArtwork)
@@ -40,7 +38,7 @@ const globalObserver = new MutationObserver((records, _observer) => {
       }
     }
 
-    llog('End container test')
+    log(LogVerbosity.Debug, '[GlobalObserver] End container test')
   })
 })
 
