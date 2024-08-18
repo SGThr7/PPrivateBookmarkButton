@@ -1,4 +1,4 @@
-import { App, createApp } from 'vue';
+import { createApp } from 'vue';
 import './style.css';
 import PrivateBookmarkButton from './components/PrivateBookmarkButton.vue';
 import { isElement, log, LogVerbosity } from './lib/util';
@@ -94,8 +94,6 @@ function initMainArtwork() {
     return
   }
 
-  const button = document.querySelector<HTMLButtonElement>('button.gtm-main-bookmark')
-
   const url = new URL(window.location.href)
   const artworkPageRegex = /^\/(?:en\/)?artworks\/(\d+)$/
   const regexResult = url.pathname.match(artworkPageRegex)
@@ -122,12 +120,6 @@ function initMainArtwork() {
 }
 
 function applyThumbnailArtwork(target: Element) {
-  const button = target.querySelector('button')
-  if (button == null) {
-    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned button is not found', target)
-    return
-  }
-
   const artworkLink = target.querySelector('a[data-gtm-value]')
   if (artworkLink == null) {
     log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned artwork link is not found', target)
@@ -137,6 +129,12 @@ function applyThumbnailArtwork(target: Element) {
   const artworkId = artworkLink.getAttribute('data-gtm-value')
   if (artworkId == null) {
     log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned artwork cannot extracted', artworkLink, target)
+    return
+  }
+
+  const button = target.querySelector('button')
+  if (button == null) {
+    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned button is not found', target)
     return
   }
 

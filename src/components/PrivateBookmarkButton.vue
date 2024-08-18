@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 
 // メインページ: .sc-kgq5hw-0.fgVkZi.gtm-main-bookmark
 // 同作者の別作品: .sc-kgq5hw-0.fgVkZi
