@@ -1,4 +1,4 @@
-import { createApp } from 'vue';
+import { App, createApp } from 'vue';
 import './style.css';
 import PrivateBookmarkButton from './components/PrivateBookmarkButton.vue';
 import { isElement, log, LogVerbosity } from './lib/util';
@@ -41,6 +41,10 @@ const globalObserver = new MutationObserver((records, _observer) => {
     log(LogVerbosity.Debug, '[GlobalObserver] End container test')
   })
 })
+const globalObserverOption: MutationObserverInit = {
+  childList: true,
+  subtree: true,
+}
 
 function init() {
   // initial injection
@@ -61,10 +65,7 @@ function init() {
 
   // observe dynamic loaded artworks
   log(LogVerbosity.Debug, 'init: Run global observer')
-  globalObserver.observe(document, {
-    childList: true,
-    subtree: true,
-  })
+  globalObserver.observe(document, globalObserverOption)
 
   // observe page title
   log(LogVerbosity.Debug, 'init: Run page title observer')
@@ -113,11 +114,10 @@ function initMainArtwork() {
   // Mount
   const app = createApp(PrivateBookmarkButton, {
     artworkId,
-    relatedBookmarkButton: button
+    relatedBookmarkButtonContainer: buttonContainer,
   })
   app.mount(ppbbRoot)
   
-
   log(LogVerbosity.Verbose, 'Add button for main artwork', artworkId, buttonContainer)
 }
 
@@ -156,7 +156,7 @@ function applyThumbnailArtwork(target: Element) {
   // Mount
   const app = createApp(PrivateBookmarkButton, {
     artworkId,
-    relatedBookmarkButton: button
+    relatedBookmarkButtonContainer: button.parentElement,
   })
   app.mount(ppbbRoot)
 

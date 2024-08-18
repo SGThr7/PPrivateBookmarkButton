@@ -1,11 +1,11 @@
 <template>
 	<button type="button" class="ppbb-button fgVkZi" @click="privateBookmark">
-    <div class="container"><span class="heart heart-fill">♥</span><span class="heart heart-outline">♡</span>️<span class="lock">🔒️</span></div>
+    <div class="container"><span class="heart heart-fill" :class="{ bookmarked: isBookmarked}">♥</span><span class="heart heart-outline">♡</span>️<span class="lock">🔒️</span></div>
   </button>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 
 // メインページ: .sc-kgq5hw-0.fgVkZi.gtm-main-bookmark
 // 同作者の別作品: .sc-kgq5hw-0.fgVkZi
@@ -22,17 +22,40 @@ const props = defineProps({
       return validatorRegex.test(val)
     },
   },
-  relatedBookmarkButton: {
-    type: HTMLButtonElement,
+  relatedBookmarkButtonContainer: {
+    type: Element,
     required: false,
   }
 })
+
+const getBookmarkButton = () => props.relatedBookmarkButtonContainer?.querySelector<HTMLButtonElement | HTMLAnchorElement>(':is(button, a:has(> svg))')
+
+const isBookmarked = ref(parseIsBookmarked())
+
+function parseIsBookmarked(): boolean {
+  const styleElementClass = 'sc-j89e3c-1'
+  const styleElement = props.relatedBookmarkButtonContainer?.querySelector(`.${styleElementClass}`)
+
+  const bookmarkedClassName = 'bXjFLc'
+  return styleElement?.classList.contains(bookmarkedClassName) ?? false
+}
+
+if (props.relatedBookmarkButtonContainer != null) {
+  const observer = new MutationObserver(() => {
+    isBookmarked.value = parseIsBookmarked()
+  })
+  observer.observe(props.relatedBookmarkButtonContainer, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] })
+}
 
 const bookmarkPageUrl = computed(() => new URL(`https://www.pixiv.net/bookmark_add.php?type=illust&illust_id=${props.artworkId}`))
 
 function privateBookmark() {
   // for click animation
-  props.relatedBookmarkButton?.click()
+  getBookmarkButton()?.click()
+
+  if (isBookmarked.value) {
+    return
+  }
 
   const bookmarkPageWindow = window.open(bookmarkPageUrl.value, '_blank', 'popup,width=1,height=1,top=0,left=0')
 
@@ -95,7 +118,7 @@ function isRadioNodeList(target: object): target is RadioNodeList {
 }
 
 .heart {
-  font-size: 150%;
+  font-size: 200%;
 }
 
 .heart-fill {
@@ -109,10 +132,14 @@ function isRadioNodeList(target: object): target is RadioNodeList {
   color: black;
 }
 
+.bookmarked {
+  color: rgb(255, 64, 96);
+}
+
 .lock {
   font-size: 100%;
   position: absolute;
-  right: -10px;
-  bottom: 0px;
+  right: -5px;
+  bottom: 1px;
 }
 </style>
