@@ -4,6 +4,7 @@
     "name": "SGThr7",
     "email": "sgthr7@gmail.com"
   },
+  "license": "MIT",
   "private": true,
   "version": "0.0.1",
   "type": "module",

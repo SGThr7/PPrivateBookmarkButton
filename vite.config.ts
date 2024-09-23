@@ -16,6 +16,7 @@ export default defineConfig({
           "en": "Add private bookmark button to pixiv.net",
         },
         version: '0.0.1',
+        license: "MIT",
         namespace: 'sgthr7/monkey-script',
         match: [
           'https://www.pixiv.net/*',
