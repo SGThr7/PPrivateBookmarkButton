@@ -19,5 +19,5 @@ export function log(verbosity: LogVerbosity, msg: string, ...data: any[]) {
   if (!import.meta.env.DEV) return;
   if (verbosity > CURRENT_LOG_VERBOSITY) return;
 
-  console.log(`[PPBookmarkButton] ${msg}`, ...data)
+  console.log(`[PixivPrivateBookmarkButton] ${msg}`, ...data)
 }

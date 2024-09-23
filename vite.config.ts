@@ -9,10 +9,10 @@ export default defineConfig({
     monkey({
       entry: 'src/main.ts',
       userscript: {
-        name: "PPBookmarkButton",
+        name: "PixivPrivateBookmarkButton",
         author: "SGThr7",
         description: {
-          "ja": "pixiv.netで、非公開状態でブックマークするボタンを追加します",
+          "": "pixiv.netで、非公開状態でブックマークするボタンを追加します",
           "en": "Add private bookmark button to pixiv.net",
         },
         version: '0.0.1',
