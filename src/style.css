@@ -12,3 +12,7 @@
   bottom: 0px;
   right: 32px;
 }
+
+:has(>.ppbb-root) {
+  display: flex;
+}

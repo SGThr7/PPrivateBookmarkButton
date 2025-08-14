@@ -1,162 +1,80 @@
-import { createApp } from 'vue';
-import './style.css';
-import PrivateBookmarkButton from './components/PrivateBookmarkButton.vue';
-import { isElement, log, LogVerbosity } from './lib/util';
+import { createApp } from 'vue'
+import PrivateBookmarkButton from './components/PrivateBookmarkButton.vue'
+import './style.css'
 
-const globalObserver = new MutationObserver((records, _observer) => {
-  records.forEach((record) => {
-    if (record.addedNodes.length <= 0) {
-      return
-    }
-    if (Array.from(record.addedNodes).some((node) => isElement(node) && Array.from(node.classList).some((className) => className.startsWith('ppbb')))) {
-      return
-    }
-
-    log(LogVerbosity.Debug, '[GlobalObserver] Begin container test', record)
-
-    // single container
-    log(LogVerbosity.Debug, '[GlobalObserver] Test single container')
-    Array.from(record.addedNodes)
-      .filter(isElement)
-      .filter(
-        (el) => el.querySelectorAll('button.sc-kgq5hw-0').length === 1
-          && el.querySelector('div.ppbb-root') == null
-      )
-      .forEach(applyThumbnailArtwork)
-    // container list
-    log(LogVerbosity.Debug, '[GlobalObserver] Test container list')
-    if (record.addedNodes.length === 1) {
-      const maybeContainersOwner = record.addedNodes[0]
-      if (isElement(maybeContainersOwner)) {
-        const artworkContainersList = maybeContainersOwner.querySelectorAll(':is(ul, div.sc-1nhgff6-4) > :is(div, li):has(button.sc-kgq5hw-0)')
-        artworkContainersList.forEach((artworkContainers) => {
-          log(LogVerbosity.Debug, '[GlobalObserver] Found container gird', artworkContainers, maybeContainersOwner)
-          Array.from(artworkContainers.children)
-            .filter((el) => el.querySelector('div.ppbb-root') == null)
-            .forEach(applyThumbnailArtwork)
-        })
-      }
-    }
-
-    log(LogVerbosity.Debug, '[GlobalObserver] End container test')
-  })
-})
-const globalObserverOption: MutationObserverInit = {
-  childList: true,
-  subtree: true,
-}
-
-function init() {
-  // initial injection
-  log(LogVerbosity.Debug, 'init: Begin initial injection')
-  const initialArtworkContainers = document.querySelectorAll('div:has(a[data-gtm-value]):has(div:nth-child(2) button.sc-kgq5hw-0)')
-  initialArtworkContainers.forEach((el) => {
-    if (
-      el.querySelectorAll('button.sc-kgq5hw-0').length === 1
-      && el.querySelector('div.ppbb-root') == null
-    ) {
-      applyThumbnailArtwork(el);
-    }
-  })
-
-  // bind events
-  log(LogVerbosity.Debug, 'init: Bind events')
-  window.addEventListener('load', onLoad)
-
-  // observe dynamic loaded artworks
-  log(LogVerbosity.Debug, 'init: Run global observer')
-  globalObserver.observe(document, globalObserverOption)
-
-  // observe page title
-  log(LogVerbosity.Debug, 'init: Run page title observer')
-  const titleObserver = new MutationObserver((records, _observer) => {
-    initMainArtwork()
-  })
-  const title = document.head.querySelector('title')
-  if (title != null) {
-    titleObserver.observe(title, {
-      childList: true,
-      subtree: true,
-    })
-  }
-}
-
-function onLoad() {
-  // 個別イラストページ
-  initMainArtwork()
-}
+import { makeLogGroupCollapsedFn, testNodeGen } from './lib/util'
+import { collectContents } from './lib/pixiv'
+import { PContent } from './lib/pixiv/artwork'
 
 init()
 
-function initMainArtwork() {
-  const buttonContainer = document.querySelector<HTMLDivElement>('div.sc-181ts2x-3')
-  if (buttonContainer == null) {
-    return
-  }
+function init() {
+	console.groupCollapsed('Initial insert')
 
-  const url = new URL(window.location.href)
-  const artworkPageRegex = /^\/(?:en\/)?artworks\/(\d+)$/
-  const regexResult = url.pathname.match(artworkPageRegex)
-  if (regexResult == null || regexResult.length <= 1) {
-    return
-  }
-  const artworkId = regexResult[1]
+	const contents = collectContents(document)
+	Iterator.from(contents.values())
+		.forEach(insertButton)
 
-  // Create button root element
-  const ppbbRoot = document.createElement('div')
-  ppbbRoot.classList.add('ppbb-root', 'ppbb-main')
+	const observerConfig: MutationObserverInit = { childList: true, subtree: true }
+	const observer = new MutationObserver(records => {
+		const { beginLogGroup, endLogGroup, isGrouping } = makeLogGroupCollapsedFn('Detect new contents loaded', `len=${records.length}`)
 
-  // Inject
-  buttonContainer.parentNode?.insertBefore(ppbbRoot, buttonContainer.nextElementSibling)
+		records.forEach(record => {
+			// Disable while inserting button
+			observer.disconnect()
 
-  // Mount
-  const app = createApp(PrivateBookmarkButton, {
-    artworkId,
-    relatedBookmarkButtonContainer: buttonContainer,
-  })
-  app.mount(ppbbRoot)
-  
-  log(LogVerbosity.Verbose, 'Add button for main artwork', artworkId, buttonContainer)
+			Iterator.from(record.addedNodes.values())
+				.filter(testNodeGen(Element))
+				.map(PContent.findFavButton)
+				.filter(val => val != null)
+				.map(PContent.tryFromFavButton)
+				.filter(val => val != null)
+				.filter(() => {
+					// Group logs if any content detected
+					beginLogGroup()
+					return true
+				})
+				.forEach(insertButton)
+
+			// Re-enable observing
+			observer.observe(document, observerConfig)
+		})
+
+		if (isGrouping()) {
+			console.log(records)
+		}
+
+		endLogGroup()
+	})
+	observer.observe(document, observerConfig)
+
+	console.groupEnd()
 }
 
-function applyThumbnailArtwork(target: Element) {
-  const artworkLink = target.querySelector('a[data-gtm-value]')
-  if (artworkLink == null) {
-    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned artwork link is not found', target)
-    return
-  }
+// MARK: Make button
 
-  const artworkId = artworkLink.getAttribute('data-gtm-value')
-  if (artworkId == null) {
-    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned artwork cannot extracted', artworkLink, target)
-    return
-  }
+function insertButton(content: PContent) {
+	console.groupCollapsed('insertButton', content.id)
+	console.log('content', content)
 
-  const button = target.querySelector('button')
-  if (button == null) {
-    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned button is not found', target)
-    return
-  }
+	const favContainer = content.favButton.parentElement
+	if (favContainer == null) {
+		console.error('Failed to find parent element of fav button', content.favButton)
+		return
+	}
 
-  const buttonContainer = button.parentElement?.parentElement
-  if (buttonContainer == null) {
-    log(LogVerbosity.Debug, 'applyThumbnailArtwork: Returned artwork link has not container', button, target)
-    return
-  }
+	const { appElement } = makeButton(content)
+	favContainer.insertBefore(appElement, content.favButton)
+	console.log('Insert private fav button', appElement)
 
-  // Create button root element
-  const ppbbRoot = document.createElement('div')
-  ppbbRoot.classList.add('ppbb-root', 'ppbb-absolute')
+	console.groupEnd()
+}
 
-  // Inject
-  buttonContainer.appendChild(ppbbRoot)
+function makeButton(content: PContent) {
+	const appElement = document.createElement('div')
+	appElement.classList.add('ppbb-root', ...content.favButton.classList)
+	const app = createApp(PrivateBookmarkButton, { content })
+	app.mount(appElement)
 
-  // Mount
-  const app = createApp(PrivateBookmarkButton, {
-    artworkId,
-    relatedBookmarkButtonContainer: button.parentElement,
-  })
-  app.mount(ppbbRoot)
-
-  log(LogVerbosity.Verbose, 'Add button for recommendation', artworkId, target)
+	return { app, appElement }
 }
