@@ -1,5 +1,5 @@
 {
-  "name": "pixiv-private-bookmark-button",
+  "name": "p-private-bookmark-button",
   "author": {
     "name": "SGThr7",
     "email": "sgthr7@gmail.com"
@@ -21,6 +21,7 @@
     "typescript": "^5.4.5",
     "vite": "^5.2.12",
     "vite-plugin-monkey": "^4.0.0",
-    "vue-tsc": "^2.0.19"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vue-tsc": "^2.2"
   }
 }
