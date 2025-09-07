@@ -14,13 +14,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - name: Set version tag to latest commit
         if: github.event_name == 'workflow_dispatch'
         run: git tag ${{ inputs.version_tag }}
       - name: Find latest version from git tag
         id: find_tag
         run: echo latest_version=$(git describe --tags --abbrev=0) >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
