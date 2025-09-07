@@ -1,7 +1,7 @@
 name: Build and release Userscript
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       version_tag:
         required: true
