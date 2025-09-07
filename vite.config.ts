@@ -17,7 +17,7 @@ export default defineConfig({
           "": "pixiv.netで、非公開状態でブックマークするボタンを追加します",
           "en": "Add private bookmark button to pixiv.net",
         },
-        version: '0.0.1',
+        version: '0.0.3',
         license: "MIT",
         namespace: 'sgthr7/monkey-script',
         match: [
